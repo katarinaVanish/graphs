@@ -685,3 +685,122 @@ void Graph::shortestPathsFrom(const string& startName,
     printPath(v1);
     printPath(v2);
 }
+
+bool Graph::hasNegativeCycle(int u, int v, const vector<vector<double>>& dist) const
+{
+    const double INF = numeric_limits<double>::infinity();
+    int n = dist.size();
+    for (int k=0; k < n; ++k)
+    {
+        if (dist[k][k] < 0 &&
+            dist[u][k] < INF &&
+            dist[k][v] < INF)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// флойд-уоршелл
+void Graph::printPathsToVertex(const string& targetName) const
+{
+    if (!nameToIndex.count(targetName))
+    {
+        cout << "Вершина не существует";
+        return;
+    }
+    int target = nameToIndex.at(targetName);
+
+    const double INF = numeric_limits<double>::infinity();
+    int n = adj.size();
+
+    vector<vector<double>> dist(n, vector<double>(n, INF));
+    vector<vector<int>> next(n, vector<int>(n, -1));
+
+    for (int i=0; i < n; ++i)
+    {
+        dist[i][i] = 0;
+        next[i][i] = i;
+    }
+
+    for (int i=0; i< n; ++i)
+    {
+        for (const auto& e : adj[i])
+        {
+            dist[i][e.to] = e.weight;
+            next[i][e.to] = e.to;
+
+            if (!directed)
+            {
+                dist[e.to][i] = e.weight;
+                next[e.to][i] = i;
+            }
+        }
+    }
+
+    for (int k=0; k < n; ++k)
+    {
+        for (int i=0; i < n; ++i)
+        {
+            for (int j =0; j < n; ++j)
+            {
+                if (dist[i][k] < INF && dist[k][j] < INF)
+                {
+                    if (dist[i][j] > dist[i][k] + dist[k][j])
+                    {
+                        dist[i][j] = dist[i][k] + dist[k][j];
+                        next[i][j] = next[i][k];
+                    }
+                }
+            }
+        }
+    }
+
+    auto buildPath = [&](int start, int end)
+    {
+        vector <int> path;
+        if (next[start][end] == -1)
+        {
+            return path;
+        }
+        int cur = start;
+        while (cur != end)
+        {
+            path.push_back(cur);
+            cur = next[cur][end];
+        }
+        path.push_back(end);
+        return path;
+    };
+    cout << "Кратчайшие пути до вершины " << targetName << ":\n";
+
+    for (int i=0; i < n; ++i)
+    {
+        if (i == target) continue;
+
+        cout << vertexNames[i] << " -> " << targetName << ": ";
+        if (hasNegativeCycle(i, target, dist))
+        {
+            cout << "путь проходит через отрицательный цикл\n";
+            continue;
+        }
+
+        if (dist[i][target] == INF)
+        {
+            cout << "нет пути\n";
+            continue;
+        }
+
+        auto path = buildPath(i, target);
+
+        for (int j=0; j < path.size(); ++j)
+        {
+            cout << vertexNames[path[j]];
+            if (j+1 < path.size()) cout << " -> ";
+        }
+        cout << " (длина = " << dist[i][target] << ")\n";
+        
+    }
+}
+

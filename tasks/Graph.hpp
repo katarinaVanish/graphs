@@ -98,4 +98,8 @@ public:
     void shortestPathsFrom(const string& startName,
                             const string& v1Name,
                             const string& v2Name) const;
+    
+    //10
+    void printPathsToVertex(const string& targetName) const;
+    bool hasNegativeCycle(int u, int v, const vector<vector<double>>& dist) const;
 };

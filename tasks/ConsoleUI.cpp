@@ -95,8 +95,9 @@ public:
             cout << "12. Найти кратчайший (по числу дуг) путь\n";
             cout << "13. Найти центр графа\n";
             cout << "14. Вывести длины кратчайших путей от u до v1 и v2\n";
+            cout << "15. Вывести кратчайшие пути до вершины u из всех остальных вершин\n";
             if (!graph.isDirected() && graph.isWeighted()){
-                cout << "15. Найти каркас минимального веса\n";
+                cout << "16. Найти каркас минимального веса\n";
             }
 
             cout << "0. Выход\n";
@@ -243,6 +244,14 @@ public:
                         break;
                     }
                     case 15:
+                    {
+                        string name;
+                        cout << "u: ";
+                        cin >> name;
+                        graph.printPathsToVertex(name);
+                        break;
+                    }
+                    case 16:
                     {
                         if (graph.isDirected() && !graph.isWeighted()){
                             "Некорректный выбор";
