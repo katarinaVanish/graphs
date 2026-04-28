@@ -7,6 +7,7 @@
 #include <tuple>
 #include <queue>
 #include <limits>
+#include <functional>
 
 using namespace std;
 
@@ -806,88 +807,101 @@ void Graph::printPathsToVertex(const string& targetName) const
 
 void Graph::maxFlow(const string& sourceName, const string& sinkName) const
 {
-    // добавитьь в уи проверку на Ориентир
-    int n = adj.size();
-
     if (!nameToIndex.count(sourceName) || !nameToIndex.count(sinkName))
     {
-        cout << "Вершин с такими именами не существует\n";
+        cout << "Одной или обеих вершин не существует";
         return;
     }
 
+    int n = adj.size();
     int s = nameToIndex.at(sourceName);
     int t = nameToIndex.at(sinkName);
 
-    // остановочная матрица пропускных способностей
-    vector<vector<double>> capacity(n, vector<double>(n, 0));
+    struct EdgeF
+    {
+        int to;
+        double cap;
+        int rev;
+    };
 
-    //заполнение capacity
+    vector<vector<EdgeF>> g(n);
+
+    auto addEdge = [&](int u, int v, double cap)
+    {
+        g[u].push_back({v, cap, (int)g[v].size()});
+        g[v].push_back({v, 0, (int)g[v].size() - 1});
+    };
+
+    // строим редуц граф
     for (int u = 0; u < n; ++u)
     {
         for (const auto& e : adj[u])
         {
-            capacity[u][e.to] += e.weight;
+            addEdge(u, e.to, e.weight);
         }
     }
 
-    double flow = 0;
+    vector<int> level(n), ptr(n);
 
-    while (true)
+    auto bfs = [&]() -> bool
     {
-        vector<int> parent(n, -1);
-        parent[s] = -2;
+        fill(level.begin(), level.end(), -1);
+        queue<int> q;
 
-        queue<pair<int, double>> q;
-        q.push({s, numeric_limits<double>::infinity()});
+        q.push(s);
+        level[s] = 0;
 
-        double new_flow = 0;
-
-        //bfs
-        while (!q.empty()) 
+        while (!q.empty())
         {
-            int cur = q.front().first;
-            double cur_flow = q.front().second;
+            int v = q.front();
             q.pop();
 
-            for (int next = 0; next < n; ++next)
+            for (auto &e : g[v])
             {
-                int cur = q.front().first;
-                double cur_flow = q.front().second;
-                q.pop();
-
-                for (int next = 0; next < n; ++next)
+                if (e.cap > 0 && level[e.to] == -1)
                 {
-                    if (parent[next] == -1 && capacity[cur][next] > 0)
-                    {
-                        parent[next] = cur;
-                        double next_flow = min(cur_flow, capacity[cur][next]);
-                        if (next == t)
-                        {
-                            new_flow = next_flow;
-                            break;
-                        }
-
-                        q.push({next, next_flow});
-                    }
+                    level[e.to] = level[v] + 1;
+                    q.push(e.to);
                 }
-                if (new_flow > 0) break;
             }
         }
-        if (new_flow == 0) break;
 
-        flow += new_flow;
+        return level[t] != -1;
+    };
 
-        // обновление остаточной сети
-        int cur = t;
-        while (cur != s)
+    function<double(int, double)> dfs = [&](int v, double pushed)
+    {
+        if (pushed == 0) return 0.0;
+        if (v == t) return pushed;
+
+        for (int &i = ptr[v]; i < (int)g[v].size(); ++i)
         {
-            int prev = parent[cur];
-            capacity[prev][cur] -= new_flow;
-            capacity[cur][prev] += new_flow;
-            cur = prev;
+            auto &e = g[v][i];
+            if (e.cap > 0 && level[e.to] == level[v] + 1)
+            {
+                double tr = dfs(e.to, min(pushed, e.cap));
+
+                if (tr == 0) continue;
+
+                e.cap -= tr;
+                g[e.to][e.rev].cap += tr;
+
+                return tr;
+            }
+        }
+        return 0.0;
+    };
+    double flow = 0;
+
+    while (bfs())
+    {
+        fill(ptr.begin(), ptr.end(), 0);
+
+        while (double pushed = dfs(s, numeric_limits<double>::infinity()))
+        {
+            flow += pushed;
         }
     }
-    cout << "Максимальный поток из " << sourceName << " в "
-        << sinkName << " = " << flow << "\n";
-        
+    cout << "Максимальный поток из " << sourceName << " в " << sinkName 
+        << " = " << flow << "\n";
 }

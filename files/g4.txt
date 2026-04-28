@@ -1,8 +1,9 @@
-10 1
-v0 v1
-v1 v3
-v3 v5
-v5 v7
-v7 v9
-v2 v2
-v4 v6
+6 1
+a b 3
+a c 2
+b d 2
+c d 2
+b e 1
+c e 1
+d f 4
+e f 4
