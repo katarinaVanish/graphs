@@ -102,4 +102,7 @@ public:
     //10
     void printPathsToVertex(const string& targetName) const;
     bool hasNegativeCycle(int u, int v, const vector<vector<double>>& dist) const;
+
+    //11
+    void maxFlow(const string& sourceName, const string& sinkName) const;
 };

@@ -96,8 +96,9 @@ public:
             cout << "13. Найти центр графа\n";
             cout << "14. Вывести длины кратчайших путей от u до v1 и v2\n";
             cout << "15. Вывести кратчайшие пути до вершины u из всех остальных вершин\n";
+            cout << "16. Найти максимальный поток\n";
             if (!graph.isDirected() && graph.isWeighted()){
-                cout << "16. Найти каркас минимального веса\n";
+                cout << "17. Найти каркас минимального веса\n";
             }
 
             cout << "0. Выход\n";
@@ -253,8 +254,21 @@ public:
                     }
                     case 16:
                     {
+                        if (!graph.isDirected())
+                        {
+                            cout << "Некорректный выбор";
+                            break;
+                        }
+                        string from, to;
+                        cout << "from to ";
+                        cin >> from >> to;
+                        graph.maxFlow(from, to);
+                        break;
+                    }
+                    case 17:
+                    {
                         if (graph.isDirected() && !graph.isWeighted()){
-                            "Некорректный выбор";
+                            cout << "Некорректный выбор";
                             break;
                         }
                         graph.kruskalMST();

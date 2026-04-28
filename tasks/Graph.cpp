@@ -804,3 +804,90 @@ void Graph::printPathsToVertex(const string& targetName) const
     }
 }
 
+void maxFlow(const string& sourceName, const string& sinkName) const
+{
+    // добавитьь в уи проверку на Ориентир
+    int n = adj.size();
+
+    if (!nameToIndex.count(sourceName) || !nameToIndex.count(sinkName))
+    {
+        cout << "Вершин с такими именами не существует\n";
+        return 0;
+    }
+
+    int s = nameToIndex.at(sourceName);
+    int t = nameToIndex.at(sinkName);
+
+    // остановочная матрица пропускных способностей
+    vector<vector<double>> capacity(n, vector<double>(n, 0));
+
+    //заполнение capacity
+    for (int u = 0; u < n; ++u)
+    {
+        for (const auto& e : adj[u])
+        {
+            capacity[u][e.to] += e.weight;
+        }
+    }
+
+    double flow = 0;
+
+    while (true)
+    {
+        vector<int> parent(n, -1);
+        parent[s] = -2;
+
+        queue<pair<int, double>> q;
+        q.push({s, numeric_limits<double>::infinity()});
+
+        double new_flow = 0;
+
+        //bfs
+        while (!q.empty()) 
+        {
+            int cur = q.front().first;
+            double cur_flow = q.front().second;
+            q.pop();
+
+            for (int next = 0; next < n; ++next)
+            {
+                int cur = q.front().first;
+                double cur_flow = q.front().second;
+                q.pop();
+
+                for (int next = 0; next < n; ++next)
+                {
+                    if (parent[next] == -1 && capacity[cur][next] > 0)
+                    {
+                        parent[next] = cur;
+                        double next_flow = min(cur_flow, capacity[cur][next]);
+                        if (next == t)
+                        {
+                            new_flow = next_flow;
+                            break;
+                        }
+
+                        q.push({next, next_flow});
+                    }
+                }
+                if (new_flow > 0) break;
+            }
+        }
+        if (new_flow == 0) break;
+
+        flow += new_flow;
+
+        // обновление остаточной сети
+        int cur = t;
+        while (cur != s)
+        {
+            int prev = parent[cur];
+            capacity[prev][cur] -= new_flow;
+            capacity[cur][prev] += new_flow;
+            cur = prev;
+        }
+    }
+    cout << "Максимальный поток из " << sourceName << " в "
+        << sinkName << " = " << flow << "\n";
+        
+}
