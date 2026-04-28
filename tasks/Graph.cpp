@@ -804,7 +804,7 @@ void Graph::printPathsToVertex(const string& targetName) const
     }
 }
 
-void maxFlow(const string& sourceName, const string& sinkName) const
+void Graph::maxFlow(const string& sourceName, const string& sinkName) const
 {
     // добавитьь в уи проверку на Ориентир
     int n = adj.size();
@@ -812,7 +812,7 @@ void maxFlow(const string& sourceName, const string& sinkName) const
     if (!nameToIndex.count(sourceName) || !nameToIndex.count(sinkName))
     {
         cout << "Вершин с такими именами не существует\n";
-        return 0;
+        return;
     }
 
     int s = nameToIndex.at(sourceName);
