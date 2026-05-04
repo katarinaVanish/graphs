@@ -615,7 +615,8 @@ void Graph::shortestPathsFrom(const string& startName,
         !nameToIndex.count(v1Name) ||
         !nameToIndex.count(v2Name))
     {
-        throw runtime_error("Одна из вершин не существует");
+        cout << "Одна из вершин не существует";
+        return;
     }
 
     int start = nameToIndex.at(startName);
@@ -721,7 +722,13 @@ void Graph::printPathsToVertex(const string& targetName) const
 
     for (int i=0; i < n; ++i)
     {
-        dist[i][i] = 0;
+        dist[i][i] = 0; // если отрицательлная петля - не пропадала
+        for (const auto& e : adj[i]) {
+            if (e.to == i && e.weight < 0) {
+                dist[i][i] = e.weight; // Отрицательная петля
+                break;
+            }
+        }
         next[i][i] = i;
     }
 
@@ -740,11 +747,12 @@ void Graph::printPathsToVertex(const string& targetName) const
         }
     }
 
-    for (int k=0; k < n; ++k)
+    // можно переставлять внутренние циклы, внешний нельзя
+    for (int k=0; k < n; ++k)  // Внешний цикл - промежуточные вершины
     {
-        for (int i=0; i < n; ++i)
+        for (int i=0; i < n; ++i)  // Средний цикл - начальные вершины
         {
-            for (int j =0; j < n; ++j)
+            for (int j =0; j < n; ++j) // Внутренний цикл - конечные вершины
             {
                 if (dist[i][k] < INF && dist[k][j] < INF)
                 {
@@ -829,7 +837,7 @@ void Graph::maxFlow(const string& sourceName, const string& sinkName) const
     auto addEdge = [&](int u, int v, double cap)
     {
         g[u].push_back({v, cap, (int)g[v].size()});
-        g[v].push_back({v, 0, (int)g[v].size() - 1});
+        g[v].push_back({v, 0, (int)g[u].size() - 1}); // исправлено
     };
 
     // строим редуц граф
@@ -838,10 +846,14 @@ void Graph::maxFlow(const string& sourceName, const string& sinkName) const
         for (const auto& e : adj[u])
         {
             addEdge(u, e.to, e.weight);
+            cout << "Добавлено ребро: " << vertexNames[u] << " -> " << vertexNames[e.to] 
+                 << " (пропускная способность: " << e.weight << ")" << endl;
         }
     }
 
     vector<int> level(n), ptr(n);
+    int iteration = 0;
+    double totalFlow = 0;
 
     auto bfs = [&]() -> bool
     {
@@ -851,10 +863,14 @@ void Graph::maxFlow(const string& sourceName, const string& sinkName) const
         q.push(s);
         level[s] = 0;
 
+        cout << "\n  BFS: начинаем из " << vertexNames[s] << endl;
+
         while (!q.empty())
         {
             int v = q.front();
             q.pop();
+
+            cout << "\tОбрабатываем вершину " << vertexNames[v] << endl;
 
             for (auto &e : g[v])
             {
@@ -862,26 +878,46 @@ void Graph::maxFlow(const string& sourceName, const string& sinkName) const
                 {
                     level[e.to] = level[v] + 1;
                     q.push(e.to);
+                    cout << "\t\t-> Найден путь к " << vertexNames[e.to] 
+                         << " (уровень " << level[e.to] 
+                         << ", остаточная пропускная способность: " << e.cap << ")" << endl;
                 }
             }
         }
 
-        return level[t] != -1;
+        bool found = level[t] != -1;
+        if (found) {
+            cout << " BFS: найден увеличивающий путь до стока " << vertexNames[t] << endl;
+        } else {
+            cout << " BFS: увеличивающих путей больше нет" << endl;
+        }
+        return found;
     };
 
     function<double(int, double)> dfs = [&](int v, double pushed)
     {
         if (pushed == 0) return 0.0;
-        if (v == t) return pushed;
+        if (v == t) {
+            cout << "\tДостигнут сток. Поток: " << pushed << endl;
+            return pushed;
+        }
 
         for (int &i = ptr[v]; i < (int)g[v].size(); ++i)
         {
             auto &e = g[v][i];
             if (e.cap > 0 && level[e.to] == level[v] + 1)
             {
+                cout << "\tПробуем ребро " << vertexNames[v] << " -> " << vertexNames[e.to] 
+                     << " (остаток: " << e.cap << ")" << endl;
                 double tr = dfs(e.to, min(pushed, e.cap));
 
-                if (tr == 0) continue;
+                if (tr == 0) {
+                    cout << "\t\t↳ тупик, ищем дальше" << endl;
+                    continue;
+                }
+
+                cout << "\t\t↳ Найден путь! Отправляем поток " << tr 
+                     << " по ребру " << vertexNames[v] << " -> " << vertexNames[e.to] << endl;
 
                 e.cap -= tr;
                 g[e.to][e.rev].cap += tr;
@@ -891,17 +927,59 @@ void Graph::maxFlow(const string& sourceName, const string& sinkName) const
         }
         return 0.0;
     };
-    double flow = 0;
+
+    cout << "\n Начало алгоритма Диница" << endl;
+    cout << "Исток: " << sourceName << " (вершина " << s << ")" << endl;
+    cout << "Сток: " << sinkName << " (вершина " << t << ")" << endl;
+
+    //double flow = 0;
 
     while (bfs())
     {
+        iteration++;
+        cout << "\n\tИтерация " << iteration << endl;
+        
         fill(ptr.begin(), ptr.end(), 0);
+        double iterFlow = 0;
 
         while (double pushed = dfs(s, numeric_limits<double>::infinity()))
         {
-            flow += pushed;
+            iterFlow += pushed;
+            cout << "  Найден увеличивающий путь с потоком: " << pushed << endl;
+            //flow += pushed;
+        }
+
+        if (iterFlow > 0) {
+            totalFlow += iterFlow;
+            cout << "Поток, найденный в итерации " << iteration << ": " << iterFlow << endl;
+            cout << "Общий поток на данный момент: " << totalFlow << endl;
         }
     }
+    cout << "\nРезультат " << endl;
     cout << "Максимальный поток из " << sourceName << " в " << sinkName 
-        << " = " << flow << "\n";
+         << " = " << totalFlow << endl;
+
+    cout << "\nФинальные потоки по ребрам" << endl;
+    double checkFlow = 0;
+    for (int u = 0; u < n; ++u) {
+        for (const auto& e : adj[u]) {
+            // Находим соответствующее ребро в residual сети
+            for (const auto& re : g[u]) {
+                // Проверяем, соответствует ли это ребро исходному
+                if (re.to == e.to) {
+                    double originalCap = e.weight;
+                    double residualCap = re.cap;
+                    double flowUsed = originalCap - residualCap;
+                    if (flowUsed > 0) {
+                        cout << vertexNames[u] << " -> " << vertexNames[e.to] 
+                             << ": " << flowUsed << " / " << originalCap << endl;
+                        if (u == s) checkFlow += flowUsed;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    cout << "Проверка: поток из истока = " << checkFlow << endl;
 }
+// пример посложнее и на каждом шаге печатать что нашел
